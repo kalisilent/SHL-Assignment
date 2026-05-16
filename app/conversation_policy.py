@@ -17,6 +17,14 @@ def _all_user_text(messages: list[Message]) -> str:
 def is_off_topic_or_refusal(messages: list[Message]) -> bool:
     text = _last_user_text(messages)
     refusal_markers = [
+        "legal advice",
+        "law",
+        "lawsuit",
+        "attorney",
+        "terminate employee",
+        "firing employees",
+        "fire employee",
+        "california labor",
         "legally required",
         "legal obligation",
         "satisfy that requirement",
@@ -63,7 +71,15 @@ def _first_turn_specific_enough(text: str) -> bool:
         "contact centre",
         "contact center",
     ]
-    return sum(1 for s in signals if s in text) >= 2 or any(s in text for s in signals[:6])
+    if sum(1 for s in signals if s in text) >= 2 or any(s in text for s in signals[:6]):
+        return True
+
+    # First-turn readiness based on combined role + skill signals
+    role_terms = ["developer", "engineer", "analyst", "manager", "backend", "full stack", "full-stack"]
+    skill_terms = ["java", "spring", "sql", "docker", "aws", "angular", "api", "microservice", "stakeholder"]
+    has_role = any(t in text for t in role_terms)
+    skill_count = sum(1 for t in skill_terms if t in text)
+    return has_role and skill_count >= 2
 
 
 def should_recommend(messages: list[Message], turn_count: int) -> bool:

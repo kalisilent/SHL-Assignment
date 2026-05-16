@@ -70,6 +70,29 @@ Return:
             )
         return recs
 
+    @staticmethod
+    def _last_user_text(messages: list[Message]) -> str:
+        for msg in reversed(messages):
+            if msg.role == "user":
+                return msg.content
+        return ""
+
+    def _fallback_compare_reply(self, messages: list[Message], retrieved_items: list[dict]) -> str:
+        last_user = self._last_user_text(messages).lower()
+        candidates = [item.get("name", "") for item in retrieved_items[:6] if item.get("name")]
+        mentioned = [name for name in candidates if name.lower().split(" ")[0] in last_user]
+        if len(mentioned) >= 2:
+            return (
+                f"{mentioned[0]} and {mentioned[1]} assess different dimensions. "
+                "Based on the catalog context, use OPQ-style personality tools for behavioral preferences "
+                "and Verify/G+ style tools for cognitive ability. If you want, I can suggest which one fits your role best."
+            )
+        return (
+            "They assess different dimensions in the SHL catalog. "
+            "Use personality questionnaires for behavioral fit and ability tests for cognitive reasoning; "
+            "I can tailor the choice to your role and seniority."
+        )
+
     async def respond(self, messages: list[Message], turn_count: int) -> ChatResponse:
         retrieved_items = self._retrieve(messages)
         context_str = json.dumps(retrieved_items, indent=2)
@@ -141,11 +164,25 @@ Return:
                 result.recommendations = []
             return result
         except Exception:
+            if is_off_topic_or_refusal(messages):
+                return ChatResponse(
+                    reply="I can only help with SHL assessment selection. I cannot provide legal or regulatory advice.",
+                    recommendations=[],
+                    end_of_conversation=False,
+                )
+
+            if is_compare_turn(messages):
+                return ChatResponse(
+                    reply=self._fallback_compare_reply(messages, retrieved_items),
+                    recommendations=[],
+                    end_of_conversation=False,
+                )
+
             if recommend_now and catalog_recs:
                 return ChatResponse(
-                    reply="Based on your requirements, here is a catalog-grounded shortlist.",
+                    reply="Based on your requirements, here is a catalog-grounded shortlist of SHL assessments.",
                     recommendations=catalog_recs,
-                    end_of_conversation=False,
+                    end_of_conversation=True,
                 )
             return ChatResponse(
                 reply="Could you share a bit more about the role, seniority, and skills you need to assess?",
