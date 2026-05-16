@@ -20,9 +20,9 @@ Due to GitHub's file size limits, the full submission package (`submission_packa
 
 ## Latest deployment
 
-- **Public API**: https://[will-be-updated].onrender.com
-- **Health check**: https://[will-be-updated].onrender.com/health
-- **Chat endpoint**: https://[will-be-updated].onrender.com/chat
+- **Public API**: https://shl-assignment-2-tljr.onrender.com
+- **Health check**: https://shl-assignment-2-tljr.onrender.com/health
+- **Chat endpoint**: https://shl-assignment-2-tljr.onrender.com/chat
 
 ---
 
