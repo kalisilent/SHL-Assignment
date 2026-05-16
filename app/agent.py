@@ -79,14 +79,34 @@ Return:
 
     def _fallback_compare_reply(self, messages: list[Message], retrieved_items: list[dict]) -> str:
         last_user = self._last_user_text(messages).lower()
+        catalog_names = [item.get("name", "") for item in self.retriever.catalog if item.get("name")]
+
+        def pick_name(keyword_options: list[str], preferred_fragments: list[str]) -> str | None:
+            for name in catalog_names:
+                lower = name.lower()
+                if any(k in last_user for k in keyword_options) and any(f in lower for f in preferred_fragments):
+                    return name
+            return None
+
+        left = pick_name(["opq", "opq32", "opq32r"], ["occupational personality questionnaire", "opq32"])
+        right = pick_name(["gsa", "global skills"], ["global skills assessment"])
+
+        if left and right:
+            return (
+                f"{left} and {right} assess different dimensions. "
+                f"{left} focuses on behavioral/personality fit, while {right} is used for broader skills capability profiling. "
+                "If you share the target role, I can recommend which should be primary vs complementary."
+            )
+
         candidates = [item.get("name", "") for item in retrieved_items[:6] if item.get("name")]
-        mentioned = [name for name in candidates if name.lower().split(" ")[0] in last_user]
+        mentioned = [name for name in candidates if any(tok in name.lower() for tok in ("opq", "verify", "global skills"))]
         if len(mentioned) >= 2:
             return (
-                f"{mentioned[0]} and {mentioned[1]} assess different dimensions. "
-                "Based on the catalog context, use OPQ-style personality tools for behavioral preferences "
-                "and Verify/G+ style tools for cognitive ability. If you want, I can suggest which one fits your role best."
+                f"{mentioned[0]} and {mentioned[1]} assess different dimensions in the SHL catalog. "
+                "Use personality-oriented tools for behavioral fit and ability/skills tools for capability evidence. "
+                "I can narrow this for your role and seniority."
             )
+
         return (
             "They assess different dimensions in the SHL catalog. "
             "Use personality questionnaires for behavioral fit and ability tests for cognitive reasoning; "
