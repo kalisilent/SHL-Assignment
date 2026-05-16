@@ -15,8 +15,10 @@ from app.name_match import names_match
 
 def calculate_recall_at_k(actual_recommendations, expected_names):
 
+    # If the trace lists no expected assessments, we cannot compute recall.
+    # Return None to signal the caller to skip this trace in averaging.
     if not expected_names:
-        return 1.0
+        return None
 
     actual_names = [rec.get("name", "") for rec in actual_recommendations]
     hits = 0
@@ -101,8 +103,11 @@ def run_evaluation(trace_filter: str | None = None):
 
             recommendations = result.get("recommendations", [])
             recall = calculate_recall_at_k(recommendations, expected_names)
-            total_recall += recall
-            trace_count += 1
+            if recall is None:
+                print("  └ No expected assessments listed for this trace — skipping from mean recall.")
+            else:
+                total_recall += recall
+                trace_count += 1
 
             print(f"  └ Expected: {len(expected_names)} | Returned: {len(recommendations)}")
             print(f"  └ Recall Score: {recall:.2f}")

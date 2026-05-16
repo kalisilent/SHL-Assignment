@@ -64,9 +64,12 @@ async def main() -> None:
             [item.model_dump() for item in response.recommendations],
             expected,
         )
-        total += recall
-        count += 1
-        print(f"{filename}: recall={recall:.2f} recs={len(response.recommendations)}")
+        if recall is None:
+            print(f"{filename}: No expected assessments listed — skipping from mean recall. recs={len(response.recommendations)}")
+        else:
+            total += recall
+            count += 1
+            print(f"{filename}: recall={recall:.2f} recs={len(response.recommendations)}")
 
     print(f"\nAGENT MEAN RECALL@10: {total / count:.2f}")
 

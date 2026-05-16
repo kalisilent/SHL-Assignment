@@ -12,8 +12,9 @@ from app.retriever import CatalogRetriever
 def calculate_recall_at_k(retrieved, expected_names):
     from app.name_match import names_match
 
+    # If there are no expected names for this trace, return None to indicate skipping.
     if not expected_names:
-        return 1.0
+        return None
 
     actual_names = [item.get("name", "") for item in retrieved]
     hits = 0
