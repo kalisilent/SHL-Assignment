@@ -1,19 +1,35 @@
 import json
 import math
+import os
 import re
-import numpy as np
-import faiss
-from sentence_transformers import SentenceTransformer
 
 class CatalogRetriever:
     def __init__(self, catalog_path: str, index_path: str):
         print("Initializing Retriever...")
         with open(catalog_path, 'r', encoding='utf-8') as f:
             self.catalog = json.load(f)
-        
-        # Load the exact same model we used to build the index
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.index = faiss.read_index(index_path)
+
+        # Dense retrieval is optional. Keep it OFF by default to fit Render free tier memory.
+        self.use_dense = os.getenv("ENABLE_DENSE_RETRIEVAL", "0") == "1"
+        self.model = None
+        self.index = None
+        self._np = None
+        if self.use_dense:
+            try:
+                import numpy as np  # lazy import: avoid loading heavy deps unless explicitly enabled
+                import faiss
+                from sentence_transformers import SentenceTransformer
+
+                self.model = SentenceTransformer('all-MiniLM-L6-v2')
+                self.index = faiss.read_index(index_path)
+                self._np = np
+                print("Dense retrieval enabled.")
+            except Exception as e:
+                self.use_dense = False
+                self.model = None
+                self.index = None
+                self._np = None
+                print(f"Dense retrieval disabled, using lexical-only fallback: {e}")
         self.abbrev_map = {
             "opq": "occupational personality questionnaire",
             "opq32": "occupational personality questionnaire",
@@ -479,16 +495,17 @@ class CatalogRetriever:
             merged_tokens.update(query_tokens)
             merged_normalized += " " + self._normalize(expanded_query)
 
-            query_vec = self.model.encode([expanded_query])
-            query_vec = np.array(query_vec).astype('float32')
-            distances, indices = self.index.search(query_vec, candidate_k)
-
             query_normalized = self._normalize(expanded_query)
-            for rank, idx in enumerate(indices[0]):
-                if idx == -1 or idx >= len(self.catalog):
-                    continue
-                score = self._score_item(idx, query_tokens, expanded_query, distances[0][rank])
-                aggregated_scores[idx] = max(aggregated_scores.get(idx, float('-inf')), score)
+            if self.use_dense and self.model is not None and self.index is not None and self._np is not None:
+                query_vec = self.model.encode([expanded_query])
+                query_vec = self._np.array(query_vec).astype('float32')
+                distances, indices = self.index.search(query_vec, candidate_k)
+
+                for rank, idx in enumerate(indices[0]):
+                    if idx == -1 or idx >= len(self.catalog):
+                        continue
+                    score = self._score_item(idx, query_tokens, expanded_query, distances[0][rank])
+                    aggregated_scores[idx] = max(aggregated_scores.get(idx, float('-inf')), score)
 
             lexical_scores = []
             qnorm = self._normalize(expanded_query)

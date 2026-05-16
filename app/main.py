@@ -41,7 +41,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
     try:
         # Pass the message history to our Gemini agent.
-        response = await agent.respond(request.messages, turn_count)
+        response = await agent.respond(request.messages, total_turns)
         # Sanitize and canonicalize the agent response to guarantee the strict schema
         try:
             sanitized = sanitize_chat_response(response, retriever.catalog)
