@@ -54,4 +54,3 @@ AI-assisted coding was used for boilerplate generation, iterative debugging, tes
 
 ---
 
-This document is intentionally concise; if you would like, I can convert it into a 1–2 page PDF for submission or expand any section with diagrams or example prompts.
